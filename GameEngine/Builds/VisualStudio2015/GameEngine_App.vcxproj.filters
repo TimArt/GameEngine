@@ -3734,6 +3734,12 @@
     <ClInclude Include="..\..\JuceLibraryCode\JuceHeader.h">
       <Filter>Juce Library Code</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\GameHUD.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GameView.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\JUCE\modules\juce_audio_formats\codecs\flac\Flac Licence.txt">
