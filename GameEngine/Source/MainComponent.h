@@ -10,6 +10,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "GameView.h"
+#include "GameLoop.h"
+#include "GameModel.h"
 
 
 //==============================================================================
@@ -33,6 +35,10 @@ private:
     TextButton button;
     Colour backgroundColour;
     GameView gameView;
+	GameLoop gameLoop;
+	GameModel gameModelCurrentFrame;
+	GameModel gameModelSwapFrameA;
+	GameModel gameModelSwapFrameB;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };

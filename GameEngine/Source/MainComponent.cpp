@@ -17,8 +17,13 @@ MainContentComponent::MainContentComponent()
     
     //backgroundColour = Colours::black;
     //button.addListener (this);
-    
+	gameLoop.setGameModel(&gameModel);
+	gameView.setGameModel(&gameModelSwapFrameB);
+
+	gameLoop.startThread();
+
     addAndMakeVisible (gameView);
+
     gameView.setOpenGLEnabled (true);
     
     setSize (600, 400);
@@ -26,6 +31,8 @@ MainContentComponent::MainContentComponent()
 
 MainContentComponent::~MainContentComponent()
 {
+	gameLoop.stopThread(200);
+
 }
 
 void MainContentComponent::paint (Graphics& g)
@@ -35,7 +42,7 @@ void MainContentComponent::paint (Graphics& g)
     //g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     //g.fillAll (backgroundColour);
     g.fillAll (Colours::white);
-
+	
     //g.setFont (Font (16.0f));
     //g.setColour (Colours::white);
     //g.drawText ("Hello World!", getLocalBounds(), Justification::centred, true);

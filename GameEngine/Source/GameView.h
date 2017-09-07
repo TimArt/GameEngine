@@ -10,6 +10,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "GameHUD.h"
+#include "GameModel.h"
 
 /** Represents the view of any game being rendered.
     It includes an OpenGL Renderer to render either 2D or 3D graphics and a
@@ -47,8 +48,11 @@ public:
     ~GameView()
     {
         // Turn off OpenGL
+		
         openGLContext.setContinuousRepainting (false);
         openGLContext.detach();
+		texture.release();
+		
     }
     
     /** Enables or disables the OpenGL layer of GameView. Enabling continuously
@@ -69,12 +73,28 @@ public:
         }
     }
     
-    
     // OpenGL Callbacks ========================================================
     void newOpenGLContextCreated() override
     {
+		DBG("hello world");
+		//Load Textures
+		texture.bind();
+
         // Setup Shaders
         createShaders();
+
+		String filePath = File::getCurrentWorkingDirectory().getFullPathName() + "\\textures\\flower.jpg";
+		File f = filePath;
+
+		Image textureImage = ImageFileFormat::loadFrom(f); //ImageCache::getFromMemory (TEXTURE_DATA);
+														   // Image must have height and width equal to a power of 2 pixels to be more efficient
+														   // when used with older GPU architectures
+		if (!(isPowerOfTwo(textureImage.getWidth()) && isPowerOfTwo(textureImage.getHeight())))
+			textureImage = textureImage.rescaled(jmin(1024, nextPowerOfTwo(textureImage.getWidth())),
+				jmin(1024, nextPowerOfTwo(textureImage.getHeight())));
+		// Use that image as a 2-D texture for the object that will be painted
+		texture.loadImage(textureImage);
+
         
         // Setup Buffer Objects
         openGLContext.extensions.glGenBuffers (1, &VBO); // Vertex Buffer Object
@@ -101,17 +121,51 @@ public:
         // Enable Alpha Blending
         glEnable (GL_BLEND);
         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDepthFunc(GL_LESS);      // Do not display back pixels
+		glEnable(GL_DEPTH_TEST);
+		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		glEnable(GL_TEXTURE_2D);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		texture.bind();
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         
         // Use Shader Program that's been defined
         shader->use();
 
+		if (uniforms->demoTexture != nullptr) {
+			uniforms->demoTexture->set((GLint)0);
+		}
+
+		uniforms->textureType->set((GLfloat) 2.0);
+
+		// Modify the uniform (global) variable projectionMatrix that will be used by the GPU when executing the shaders
+		if (uniforms->projectionMatrix != nullptr)
+			// Update the projection matrix with the values given, 1 matrix, do not transpose
+			uniforms->projectionMatrix->setMatrix4(getProjectionMatrix().mat, 1, false);
+
+		// Modify the uniform (global) variable viewMatrix that will be used by the GPU when executing the shaders
+		if (uniforms->viewMatrix != nullptr)
+			// Update the view matrix with the values given, 1 matrix, do not transpose
+			uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
+
+
+		//Critical section for game model
+
+		Array<GLfloat> floatArr = gameModel->drawableObjects.getFirst()->getVertices();
+		GLfloat* vertices = floatArr.getRawDataPointer(); //gameModel->drawableObjects.getFirst()->getVertices().getRawDataPointer();
+
+		//end critical section
+
+
         // Define Vertices for a Square (the view plane)
-        GLfloat vertices[] = {
+       /* GLfloat vertices[] = {
             1.0f,   1.0f,  0.0f,  // Top Right
             1.0f,  -1.0f,  0.0f,  // Bottom Right
             -1.0f, -1.0f,  0.0f,  // Bottom Left
             -1.0f,  1.0f,  0.0f   // Top Left
-        };
+        };*/
         // Define Which Vertex Indexes Make the Square
         GLuint indices[] = {  // Note that we start from 0!
             0, 1, 3,   // First Triangle
@@ -120,7 +174,7 @@ public:
 
         // VBO (Vertex Buffer Object) - Bind and Write to Buffer
         openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, VBO);
-        openGLContext.extensions.glBufferData (GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+        openGLContext.extensions.glBufferData (GL_ARRAY_BUFFER, sizeof(GLfloat)*12, vertices, GL_STREAM_DRAW);
                                                                                         // GL_DYNAMIC_DRAW or GL_STREAM_DRAW
                                                                                         // We may want GL_DYNAMIC_DRAW since it is for
                                                                                         // vertex data that will be changing alot.
@@ -136,6 +190,7 @@ public:
         openGLContext.extensions.glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
         openGLContext.extensions.glEnableVertexAttribArray (0);
         
+		
         // Draw Vertices
         glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // For EBO's (Element Buffer Objects) (Indices)
         //glDrawArrays (GL_TRIANGLES, 0, 6); // For just VBO's (Vertex Buffer Objects)
@@ -160,6 +215,10 @@ public:
     
     void paint(Graphics & g) override
     {}
+
+	void setGameModel(GameModel** modelContainer) {
+		gameModelContainer = modelContainer;
+	}
     
     
 private:
@@ -169,44 +228,85 @@ private:
 
     /** Calculates and returns the Projection Matrix.
      */
-//    Matrix3D<float> getProjectionMatrix() const
-//    {
-//        float w = 1.0f / (0.5f + 0.1f);
-//        float h = w * getLocalBounds().toFloat().getAspectRatio (false);
-//        return Matrix3D<float>::fromFrustum (-w, w, -h, h, 4.0f, 30.0f);
-//    }
+    Matrix3D<float> getProjectionMatrix() const
+    {
+        float w = 1.0f / (0.5f + 0.1f);
+        float h = w * getLocalBounds().toFloat().getAspectRatio (false);
+        return Matrix3D<float>::fromFrustum (-w, w, -h, h, 4.0f, 30.0f);
+    }
     
     /** Calculates and returns the View Matrix.
      */
-//    Matrix3D<float> getViewMatrix() const
-//    {
-//        Matrix3D<float> viewMatrix (Vector3D<float> (0.0f, 0.0f, -10.0f));
-//        Matrix3D<float> rotationMatrix = draggableOrientation.getRotationMatrix();
-//        
-//        return rotationMatrix * viewMatrix;
-//    }
+    Matrix3D<float> getViewMatrix() const
+    {
+        Matrix3D<float> viewMatrix (Vector3D<float> (0.0f, 0.0f, -10.0f));
+       // Matrix3D<float> rotationMatrix = draggableOrientation.getRotationMatrix();
+        
+		return viewMatrix;//rotationMatrix * viewMatrix;
+    }
     
     /** Loads the OpenGL Shaders and sets up the whole ShaderProgram
      */
     void createShaders()
     {
-        vertexShader =
+        /*vertexShader =
         "#version 330 core\n"
         "layout (location = 0) in vec2 position;\n"
         "\n"
         "void main()\n"
         "{\n"
         "    gl_Position = vec4(position, 0.0f, 1.0f);\n"
-        "}\n";
+        "}\n";*/
+
+		vertexShader = 
+			"#version 330 core\n"
+			"attribute vec4 position;\n"
+			"attribute vec4 sourceColour;\n"
+			"attribute vec2 textureCoordIn;\n"
+			"\n"
+			"uniform mat4 projectionMatrix;\n"
+			"uniform mat4 viewMatrix;\n"
+			"\n"
+			"varying vec4 destinationColour;\n"
+			"varying vec2 textureCoordOut;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"    destinationColour = sourceColour;\n"
+			"    textureCoordOut = textureCoordIn;\n"
+			"    gl_Position = projectionMatrix * viewMatrix * position;\n"
+			"}\n";
         
         // Base Fragment-Shader paints the object green.
-        fragmentShader =
+       /* fragmentShader =
         "#version 330 core\n"
         "out vec4 color;\n"
         "void main()\n"
         "{\n"
-        "    color = vec4 (0.0f, 1.0f, 1.0f, 1.0f);\n"
-        "}\n";
+        "    color = vec4 (0.0f, 0.50f, 0.70f, 1.0f);\n"
+        "}\n";*/
+
+		fragmentShader =
+			"#version 330 core\n"
+#if JUCE_OPENGL_ES
+			"precision lowp float;\n"
+			"varying lowp vec4 destinationColour;\n"
+			"varying lowp vec2 textureCoordOut;\n"
+#else
+			"varying vec4 destinationColour;\n"
+			"varying vec2 textureCoordOut;\n"
+#endif
+			"\n"
+			"uniform sampler2D demoTexture;\n"
+			"uniform float textureType;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"    if (textureType < 0.1)\n"
+			"        gl_FragColor = destinationColour;\n"
+			"    else if (textureType < 2.1)\n"
+			"     gl_FragColor = texture2D (demoTexture, textureCoordOut);\n"
+			"}\n";
         
         
         ScopedPointer<OpenGLShaderProgram> newShader (new OpenGLShaderProgram (openGLContext));
@@ -224,6 +324,9 @@ private:
             uniforms   = new Uniforms (openGLContext, *shader);
             
             statusText = "GLSL: v" + String (OpenGLShaderProgram::getLanguageVersion(), 2);
+			String tmp = "\\textures\\flower.jpg";
+			//statusText = File::getCurrentWorkingDirectory().getFullPathName();
+			//statusText += tmp;
         }
         else
         {
@@ -241,9 +344,11 @@ private:
         {
             projectionMatrix = createUniform (openGLContext, shaderProgram, "projectionMatrix");
             viewMatrix       = createUniform (openGLContext, shaderProgram, "viewMatrix");
+			demoTexture = createUniform(openGLContext, shaderProgram, "demoTexture");
+			textureType = createUniform(openGLContext, shaderProgram, "textureType");
         }
         
-        ScopedPointer<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix;
+        ScopedPointer<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, demoTexture, textureType;
         //ScopedPointer<OpenGLShaderProgram::Uniform> lightPosition;
         
         private:
@@ -271,11 +376,17 @@ private:
     
     const char* vertexShader;
     const char* fragmentShader;
+
+	//Textures Testing
+	OpenGLTexture texture;
     
     // JUCE Components
     GameHUD gameHUD;
     
     // DEBUGGING
     Label statusLabel;
+
+	//GameModel
+	GameModel* gameModel;
     
 };

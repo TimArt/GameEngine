@@ -32,11 +32,14 @@ public:
     
     void paint (Graphics &g) override
     {
+		g.drawText("OpenGL with Shaders Yo", 25, 30, 300, 30, Justification::left);
+		g.drawLine(20, 30, 170, 30);
+		g.drawLine(20, 60, 170, 60);
     }
     
     void resized () override
     {
-        slider.setBounds(20, 20, 200, 50);
+        slider.setBounds(20, 75, 200, 50);
     }
     
 private:

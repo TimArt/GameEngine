@@ -3740,6 +3740,21 @@
     <ClInclude Include="..\..\Source\GameView.h">
       <Filter>GameEngine\Source</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Vertex.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GameLoop.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\DrawableObject.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\SquareObject.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GameModel.h">
+      <Filter>GameEngine\Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\JUCE\modules\juce_audio_formats\codecs\flac\Flac Licence.txt">
