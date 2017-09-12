@@ -10,15 +10,32 @@
 
 
 //==============================================================================
-MainContentComponent::MainContentComponent()
+MainContentComponent::MainContentComponent() : Thread("CoreEngine")
 {
     //button.setButtonText ("Lolz wutt");
     //addAndMakeVisible (button);
     
     //backgroundColour = Colours::black;
     //button.addListener (this);
-	gameLoop.setGameModel(&gameModel);
-	gameView.setGameModel(&gameModelSwapFrameB);
+
+	gameModelCurrentFrame = new GameModel();
+	gameModelSwapFrameA = new GameModel();
+	gameModelSwapFrameB = new GameModel();
+
+	gameLoop.setCoreWaitable(&coreWaitable);
+	gameLoop.setLoopWaitable(&logicWaitable);
+
+	gameView.setCoreWaitable(&coreWaitable);
+	gameView.setLoopWaitable(&renderWaitable);
+
+	gameModelLogicContainer = &gameModelSwapFrameA;
+
+	gameModelRenderContainer = &gameModelSwapFrameB;
+
+
+	gameLoop.setGameModels(gameModelLogicContainer,gameModelCurrentFrame);
+
+	gameView.setGameModel(gameModelRenderContainer);
 
 	gameLoop.startThread();
 
@@ -27,10 +44,13 @@ MainContentComponent::MainContentComponent()
     gameView.setOpenGLEnabled (true);
     
     setSize (600, 400);
+
+	this->startThread();
 }
 
 MainContentComponent::~MainContentComponent()
 {
+	gameView.setOpenGLEnabled(false);
 	gameLoop.stopThread(200);
 
 }
@@ -66,3 +86,33 @@ void MainContentComponent::buttonClicked (Button * buttonPtr)
         repaint();
     }
 }
+
+
+void  MainContentComponent::run() {
+
+	while (!threadShouldExit()) {
+
+		renderWaitable.signal();
+
+		logicWaitable.signal();
+
+
+		coreWaitable.wait();
+
+
+		coreWaitable.wait();
+
+		if (*gameModelLogicContainer = gameModelSwapFrameA) {
+			*gameModelLogicContainer = gameModelSwapFrameB;
+			*gameModelRenderContainer = gameModelSwapFrameA;
+		} else {
+			*gameModelLogicContainer = gameModelSwapFrameA;
+			*gameModelRenderContainer = gameModelSwapFrameB;
+		}
+		
+
+	}
+	
+	
+}
+

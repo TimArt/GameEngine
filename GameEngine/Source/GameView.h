@@ -76,24 +76,23 @@ public:
     // OpenGL Callbacks ========================================================
     void newOpenGLContextCreated() override
     {
-		DBG("hello world");
 		//Load Textures
-		texture.bind();
+		//texture.bind();
 
         // Setup Shaders
         createShaders();
 
-		String filePath = File::getCurrentWorkingDirectory().getFullPathName() + "\\textures\\flower.jpg";
-		File f = filePath;
+		//String filePath = File::getCurrentWorkingDirectory().getFullPathName() + "\\textures\\flower.jpg";
+		//File f = filePath;
 
-		Image textureImage = ImageFileFormat::loadFrom(f); //ImageCache::getFromMemory (TEXTURE_DATA);
+		//Image textureImage = ImageFileFormat::loadFrom(f); //ImageCache::getFromMemory (TEXTURE_DATA);
 														   // Image must have height and width equal to a power of 2 pixels to be more efficient
 														   // when used with older GPU architectures
-		if (!(isPowerOfTwo(textureImage.getWidth()) && isPowerOfTwo(textureImage.getHeight())))
-			textureImage = textureImage.rescaled(jmin(1024, nextPowerOfTwo(textureImage.getWidth())),
-				jmin(1024, nextPowerOfTwo(textureImage.getHeight())));
+		//if (!(isPowerOfTwo(textureImage.getWidth()) && isPowerOfTwo(textureImage.getHeight())))
+		//	textureImage = textureImage.rescaled(jmin(1024, nextPowerOfTwo(textureImage.getWidth())),
+		//		jmin(1024, nextPowerOfTwo(textureImage.getHeight())));
 		// Use that image as a 2-D texture for the object that will be painted
-		texture.loadImage(textureImage);
+		//texture.loadImage(textureImage);
 
         
         // Setup Buffer Objects
@@ -109,6 +108,9 @@ public:
     
     void renderOpenGL() override
     {
+		//wait for Core Engine to say go
+		renderWaitable->wait();
+		
         jassert (OpenGLHelpers::isContextActive());
         
         // Setup Viewport
@@ -126,7 +128,7 @@ public:
 		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 		glEnable(GL_TEXTURE_2D);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		texture.bind();
+		//texture.bind();
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -138,7 +140,7 @@ public:
 			uniforms->demoTexture->set((GLint)0);
 		}
 
-		uniforms->textureType->set((GLfloat) 2.0);
+		//uniforms->textureType->set((GLfloat) 2.0);
 
 		// Modify the uniform (global) variable projectionMatrix that will be used by the GPU when executing the shaders
 		if (uniforms->projectionMatrix != nullptr)
@@ -149,15 +151,9 @@ public:
 		if (uniforms->viewMatrix != nullptr)
 			// Update the view matrix with the values given, 1 matrix, do not transpose
 			uniforms->viewMatrix->setMatrix4(getViewMatrix().mat, 1, false);
-
-
-		//Critical section for game model
-
-		Array<GLfloat> floatArr = gameModel->drawableObjects.getFirst()->getVertices();
+		
+		Array<GLfloat> floatArr = (*gameModelContainer)->drawableObjects.getFirst()->getVertices();
 		GLfloat* vertices = floatArr.getRawDataPointer(); //gameModel->drawableObjects.getFirst()->getVertices().getRawDataPointer();
-
-		//end critical section
-
 
         // Define Vertices for a Square (the view plane)
        /* GLfloat vertices[] = {
@@ -201,8 +197,9 @@ public:
         openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
         //openGLContext.extensions.glBindVertexArray(0);
 
-
-
+		//Tell Core Engine I am donezo
+		coreWaitable->signal();
+		
     }
     
     
@@ -218,6 +215,15 @@ public:
 
 	void setGameModel(GameModel** modelContainer) {
 		gameModelContainer = modelContainer;
+	}
+
+	void setCoreWaitable(WaitableEvent* waitable) {
+		coreWaitable = waitable;
+	}
+
+	void setLoopWaitable(WaitableEvent* waitable) {
+		renderWaitable = waitable;
+		
 	}
     
     
@@ -387,6 +393,10 @@ private:
     Label statusLabel;
 
 	//GameModel
-	GameModel* gameModel;
+	GameModel** gameModelContainer;
+	WaitableEvent* renderWaitable;
+	WaitableEvent* coreWaitable;
+
+	int i = 0;
     
 };

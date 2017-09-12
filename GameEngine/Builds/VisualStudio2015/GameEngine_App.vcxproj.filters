@@ -3740,9 +3740,6 @@
     <ClInclude Include="..\..\Source\GameView.h">
       <Filter>GameEngine\Source</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Vertex.h">
-      <Filter>GameEngine\Source</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\GameLoop.h">
       <Filter>GameEngine\Source</Filter>
     </ClInclude>

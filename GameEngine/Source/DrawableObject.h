@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../JuceLibraryCode/JuceHeader.h"
-#include "Vertex.h"
+#include "../JuceLibraryCode/JuceHeader.h";
 
 class DrawableObject {
 public:
