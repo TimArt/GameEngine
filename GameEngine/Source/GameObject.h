@@ -256,7 +256,7 @@ public:
     }
     
     
-    // These seem a but weird to me. They seem to be a physics origin.
+    // These seem a bit weird to me. There seem to be a physics origin.
     // There is already an origin position inside a renderable object, but it
     // does make more sense to have a position for every object, even if it
     // is not renderable.
